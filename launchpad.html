@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#101114">
+<title>Launchpad — 8×8 Music Pad</title>
+<style>
+:root{color-scheme:dark;--bg:#101114;--panel:#1b1d22;--line:#33363e;--muted:#969ba7;--text:#f4f5f7;--accent:#42e8b4}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:radial-gradient(ellipse at top,#20242b 0,#101114 60%);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);touch-action:pan-y}
+button,select,input{font:inherit}
+.app{width:min(100%,780px);margin:0 auto;padding:12px 0 22px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:3px 2px 14px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:38px;height:38px;border:2px solid #e9edf2;border-radius:9px;display:grid;grid-template-columns:repeat(2,1fr);gap:3px;padding:5px;transform:rotate(-4deg)}
+.logo i{background:#f3f5f8;border-radius:2px}.logo i:nth-child(2){background:#41e8b3}.logo i:nth-child(3){background:#ffdc4a}
+h1{font-size:18px;letter-spacing:.12em;margin:0;font-weight:850} .subtitle{font-size:10px;letter-spacing:.16em;color:var(--muted);margin-top:3px}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;color:#b9bec8;white-space:nowrap}.led{width:7px;height:7px;border-radius:50%;background:#555;box-shadow:0 0 0 3px #ffffff0b}.led.on{background:#48f0a9;box-shadow:0 0 10px #48f0a9}
+.panel{background:linear-gradient(145deg,#24262c,#17191e);border:1px solid #383b43;border-radius:16px;padding:12px;box-shadow:0 12px 32px #0006,inset 0 1px #ffffff09}
+.controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:11px}
+.control{min-width:0;background:#111317;border:1px solid #343740;border-radius:10px;padding:8px 9px}
+.control label{display:block;font-size:9px;letter-spacing:.12em;color:#9da3af;text-transform:uppercase;margin-bottom:6px}
+.control select,.control input{width:100%;min-width:0;background:#252830;color:#f5f6f8;border:1px solid #3b3e47;border-radius:6px;padding:6px;font-size:12px;outline:none}
+.control input[type=range]{padding:0;accent-color:var(--accent)}
+.transport{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:11px}
+.btn{border:1px solid #41444e;background:linear-gradient(#30333b,#22242a);color:#f6f7f9;border-radius:9px;padding:9px 11px;font-size:12px;font-weight:700;cursor:pointer;min-height:36px}
+.btn:active{transform:translateY(1px)}.btn.primary{background:linear-gradient(#52f2c0,#25bb8d);color:#091b15;border-color:#73ffd3}.btn.warn{border-color:#713b44;color:#ffb7c0}
+.btn.small{padding:7px 9px;min-height:32px;font-size:11px}
+.transport .spacer{flex:1}
+.readout{font-size:11px;color:#aeb3bd;font-variant-numeric:tabular-nums}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 2px 8px}
+.section-head strong{font-size:11px;letter-spacing:.16em}
+.section-head span{font-size:10px;color:#969ba7}
+.grid-wrap{background:#0d0f12;border:1px solid #343740;border-radius:12px;padding:8px;box-shadow:inset 0 3px 10px #0009}
+.pad-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px;touch-action:none;user-select:none}
+.pad{appearance:none;border:1px solid #454851;background:linear-gradient(145deg,#30333a,#24262c);border-radius:5px;aspect-ratio:1/1;min-width:0;padding:0;position:relative;overflow:hidden;box-shadow:inset 0 1px #ffffff0b,0 2px 2px #0007;cursor:pointer;touch-action:none;user-select:none}
+.pad:after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,#ffffff13,transparent 50%);pointer-events:none}
+.pad .num{position:absolute;left:3px;top:3px;font-size:8px;color:#9ca1ab;opacity:.55;line-height:1}
+.pad.active{background:var(--pad-color,#42e8b4);border-color:var(--pad-color,#42e8b4);box-shadow:0 0 8px color-mix(in srgb,var(--pad-color,#42e8b4) 80%,transparent),0 0 18px color-mix(in srgb,var(--pad-color,#42e8b4) 36%,transparent),inset 0 1px #ffffff85}
+.pad.active .num{color:#07120f;opacity:.8}
+.pad.playing{animation:pulse .13s ease-out}
+@keyframes pulse{from{filter:brightness(1.8);transform:scale(.96)}to{filter:brightness(1);transform:scale(1)}}
+.pad-grid.labels .pad:before{content:attr(data-label);position:absolute;left:2px;right:2px;bottom:3px;text-align:center;font-size:clamp(5px,1.5vw,9px);color:#e7eaf0;opacity:.7;white-space:nowrap;overflow:hidden}
+.pad.active:before{color:#101114}
+.bottom-row{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:10px;color:#9298a3;font-size:10px}
+.modebar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 5px;scrollbar-width:none}
+.modebar::-webkit-scrollbar{display:none}
+.mode{flex:1;white-space:nowrap;border-radius:8px;border:1px solid #3b3e47;background:#191b20;color:#aeb3bd;padding:8px 10px;font-size:11px;font-weight:700}
+.mode[aria-pressed=true]{background:#273b36;border-color:#48e7b1;color:#72f5c6}
+.pad.rainbow,.pad.active.rainbow{background:var(--rainbow-color,#ff4acb);border-color:var(--rainbow-color,#ff4acb);box-shadow:0 0 8px var(--rainbow-color,#ff4acb),0 0 18px color-mix(in srgb,var(--rainbow-color,#ff4acb) 55%,transparent),inset 0 1px #ffffffaa;z-index:2;animation:rainbowPulse .39s ease-out}
+@keyframes rainbowPulse{0%{filter:brightness(1.6);transform:scale(.94)}100%{filter:brightness(1);transform:scale(1)}}
+.pad.rainbow .num{color:#141414;opacity:.9}
+.text-mode-tools{display:none;gap:9px;flex-direction:column;margin:9px 0 11px;background:#111317;border:1px solid #3c414a;border-radius:10px;padding:10px}
+.text-mode-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.text-mode-top strong{font-size:11px;color:#e6e9ef}.text-mode-top label{font-size:10px;color:#9da3af}.text-mode-top select{background:#252830;color:white;border:1px solid #3b3e47;border-radius:6px;padding:6px;font-size:11px}
+#textSequence{width:100%;min-height:78px;resize:vertical;background:#202229;color:#f5f6f8;border:1px solid #3b3e47;border-radius:8px;padding:9px;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;outline:none}
+.text-help{font-size:10px;line-height:1.5;color:#9298a3}.text-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+
+.modebar{flex-wrap:nowrap;}
+.mode{flex:0 0 auto;}
+.mp3-assignment{margin:9px 0 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#111317;border:1px solid #3c414a;border-radius:10px;padding:10px}
+.mp3-copy{display:flex;flex:1 1 150px;flex-direction:column;gap:4px;min-width:0}
+.mp3-copy strong{font-size:11px;color:#e6e9ef}
+.mp3-copy span{font-size:10px;line-height:1.4;color:#9da3af;overflow-wrap:anywhere}
+
+.lower{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.card{background:#191b20;border:1px solid #343740;border-radius:12px;padding:11px;min-width:0}
+.card h2{font-size:10px;letter-spacing:.14em;margin:0 0 9px;color:#dfe2e8}
+.card .row{display:flex;align-items:center;gap:7px;margin:7px 0}.card .row label{font-size:11px;color:#aeb3bd;flex:1}
+.card input[type=range]{width:100%;accent-color:#42e8b4;min-width:0}
+.card select{max-width:58%;background:#252830;color:white;border:1px solid #3b3e47;border-radius:6px;padding:5px;font-size:11px}
+.seq{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:3px}
+.step{aspect-ratio:1;border-radius:3px;border:1px solid #41444c;background:#292c33;padding:0;min-width:0}
+.step.on{background:#ffdc4a;border-color:#fff0a2;box-shadow:0 0 7px #ffdc4a55}
+.step.beat{outline:2px solid #f5f6f8;outline-offset:1px}
+.footer{text-align:center;color:#656b76;font-size:10px;padding:13px 0 0;line-height:1.5}
+@media(max-width:430px){.app{padding-top:8px}.panel{padding:8px;border-radius:13px}.controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.control{padding:7px}.pad-grid{gap:4px}.grid-wrap{padding:6px}.pad .num{font-size:7px}.lower{grid-template-columns:1fr}.brand h1{font-size:16px}.logo{width:34px;height:34px}.btn{padding:8px 9px}.status{font-size:10px}}
+@media(min-width:600px){.pad-grid{gap:7px}.grid-wrap{padding:12px}.pad{border-radius:7px}.pad .num{font-size:10px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="brand"><div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><h1>LAUNCHPAD</h1><div class="subtitle">TOUCH MUSIC STUDIO</div></div></div>
+    <div class="status"><span id="led" class="led"></span><span id="statusText">AUDIO READY</span></div>
+  </header>
+  <section class="panel">
+    <div class="controls">
+      <div class="control"><label for="kit">Sound bank</label><select id="kit"><option value="electro">Electro</option><option value="house">House</option><option value="lofi">Lo-fi</option><option value="sampled">Sampled audio</option></select></div>
+      <div class="control"><label for="bpm">Tempo · BPM</label><input id="bpm" type="number" min="50" max="200" value="120" inputmode="numeric"></div>
+      <div class="control"><label for="volume">Master volume</label><input id="volume" type="range" min="0" max="1" value="0.75" step="0.01"></div>
+      <div class="control"><label for="scale">Instrument scale</label><select id="scale"><option value="minor">A Minor</option><option value="major">C Major</option><option value="pent">A Pentatonic</option><option value="chromatic">Chromatic</option></select></div>
+    </div>
+    <div class="transport">
+      <button class="btn primary" id="playSeq">▶ PLAY SEQUENCE</button>
+      <button class="btn" id="stopSeq">■ STOP</button>
+      <button class="btn" id="record">● RECORD</button>
+      <button class="btn" id="clear">CLEAR</button>
+      <button class="btn" id="seqToggle">STEP SEQ</button>
+      <span class="spacer"></span><span class="readout" id="timeReadout">120 BPM · 16 STEPS</span>
+    </div>
+    <div class="section-head"><strong>SOUND MODE</strong><span>CHANGE WHILE PLAYING</span></div>
+    <div class="modebar" role="group" aria-label="Sound mode">
+      <button class="mode" data-mode="original" aria-pressed="true">1. 원래 모드</button>
+      <button class="mode" data-mode="piano" aria-pressed="false">2. Piano</button>
+      <button class="mode" data-mode="synth" aria-pressed="false">3. 신스</button>
+      <button class="mode" data-mode="usermp3" aria-pressed="false">4. 사용자 MP3</button>
+      <button class="mode" data-mode="marimba" aria-pressed="false">5. 마림바</button>
+      <button class="mode" data-mode="electronic" aria-pressed="false">6. Electronic</button>
+      <button class="mode" data-mode="textmode" aria-pressed="false">7. 텍스트 입력</button>
+    </div>
+    <div id="textModeTools" class="text-mode-tools">
+      <div class="text-mode-top"><strong>텍스트로 정해진 멜로디 연주</strong><label for="textInstrument">악기</label><select id="textInstrument"><option value="acoustic_grand_piano">Piano</option><option value="lead_2_sawtooth">Synth</option><option value="marimba">Marimba</option></select></div>
+      <textarea id="textSequence" spellcheck="false" autocapitalize="off" autocomplete="off">C4 D4 E4 G4 | A4 G4 E4 C4</textarea>
+      <div class="text-help">음표를 공백으로 구분해 입력하세요: C4 D4 E4 G4. 쉼표 대신 - 를 쓰면 한 박자 쉬고, C4:2 는 두 박자 연주합니다. # / b 음표도 지원합니다. 패드를 누르면 해당 음도 바로 재생됩니다.</div>
+      <div class="text-actions"><button class="btn primary" id="playText">▶ 입력한 멜로디 연주</button><button class="btn" id="stopText">■ 멈춤</button><span id="textStatus" class="readout">외부 녹음 샘플 사용</span></div>
+    </div>
+    <div id="userMp3Tools" class="mp3-assignment" style="display:none">
+      <div class="mp3-copy"><strong>사용자 MP3 패드 지정</strong><span id="mp3Summary">MP3 파일을 지정하면 64개 패드에 연결됩니다.</span></div>
+      <button class="btn primary" id="chooseMp3">MP3 파일 지정</button>
+      <input id="userMp3Files" type="file" accept=".mp3,audio/mpeg" multiple hidden>
+    </div>
+    <div class="section-head"><strong id="gridTitle">DRUM PADS · 8×8</strong><span id="gridHint">TAP OR HOLD · MULTI-TOUCH</span></div>
+    <div class="grid-wrap"><div id="padGrid" class="pad-grid" aria-label="64 music pads"></div></div>
+    <div class="bottom-row"><span id="modeInfo">Rows: kick · snare · hats · percussion</span><span id="touchInfo">64 PADS · MULTI-TOUCH</span></div>
+    <div id="seqPanel" style="display:none;margin-top:13px">
+      <div class="section-head"><strong>16-STEP DRUM SEQUENCER</strong><span>Tap steps to toggle</span></div>
+      <div id="sequencer"></div>
+    </div>
+    <div class="lower">
+      <div class="card"><h2>PLAYBACK</h2>
+        <div class="row"><label for="transpose">Pitch shift</label><input id="transpose" type="range" min="-12" max="12" step="1" value="0"></div>
+        <div class="row"><label for="octave">Octave</label><select id="octave"><option value="-1">-1</option><option value="0" selected>0</option><option value="1">+1</option><option value="2">+2</option></select></div>
+        <div class="row"><label>Audio source</label><span style="font-size:10px;color:#42e8b4">External MP3 files</span></div>
+      </div>
+      <div class="card"><h2>QUICK ACTIONS</h2>
+        <div class="row"><button class="btn small" id="demo">LOAD BEAT</button><button class="btn small" id="save">SAVE PATTERN</button></div>
+        <div class="row"><button class="btn small" id="load">LOAD PATTERN</button><button class="btn small" id="labels">PAD LABELS: OFF</button></div>
+        <div class="row"><label>Tip: tap pads or hold multiple pads.</label></div>
+      </div>
+    </div>
+  </section>
+  <div class="footer">PRERECORDED MP3 SAMPLES + EXTERNAL AUDIO CLIPS · NO LIVE SYNTHESIS<br>Piano / Synth / Marimba: prerecorded FluidR3_GM samples (CC BY 3.0; MIDI.js Soundfonts project). Text mode plays note sequences using prerecorded samples.</div>
+</main>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const grid = $('padGrid');
+const state = {
+  mode:'original', kit:'electro', playing:false, timer:null, step:0,
+  recording:false, events:[], startedAt:0, labels:false, held:new Map(),
+  seq:Array.from({length:4},()=>Array(16).fill(false)),
+  activePlayers:new Set(), loops:new Map(), userTracks:[], objectUrls:[],
+  sampleBanks:new Map(), sampleBankPromises:new Map(), textPlayToken:0, rainbowToken:0, rainbowTimers:[]
+};
+const colors=['#ffdf4d','#ff4c79','#45f0a5','#44d8ff','#a879ff','#ff9848','#ff6bce','#e7f1ff'];
+const drumNames=['KICK','SNARE','CLOSED HAT','OPEN HAT','FLOOR TOM','MID TOM','HIGH TOM','CRASH'];
+const scaleMap={minor:[0,2,3,5,7,8,10],major:[0,2,4,5,7,9,11],pent:[0,3,5,7,10],chromatic:[0,1,2,3,4,5,6,7,8,9,10,11]};
+const sfx='https://sfxmint.com/dl/';
+// All built-in sound sources are external recorded audio files (MP3), not oscillator-generated tones.
+const DRUMS=[
+ sfx+'acoustic-drum-kit-kick-01.mp3',sfx+'acoustic-drum-kit-snare-01.mp3',
+ sfx+'acoustic-drum-kit-closed-hat-01.mp3',sfx+'acoustic-drum-kit-open-hat-01.mp3',
+ sfx+'acoustic-drum-kit-floor-tom-01.mp3',sfx+'acoustic-drum-kit-mid-tom-01.mp3',
+ sfx+'acoustic-drum-kit-high-tom-01.mp3',sfx+'acoustic-drum-kit-crash-01.mp3'
+];
+const MUSIC_LOOPS=[
+ 'https://tonejs.github.io/audio/drum-samples/loops/ominous.mp3',
+ 'https://tonejs.github.io/audio/loop/FWDL.mp3',
+ 'https://tonejs.github.io/audio/berklee/arpeggio3crazy.mp3',
+ 'https://tonejs.github.io/audio/berklee/gurgling_theremin_1.mp3',
+ 'https://tonejs.github.io/audio/berklee/gong_1.mp3',
+ 'https://tonejs.github.io/audio/berklee/shaker_slow_1.mp3',
+ 'https://tonejs.github.io/audio/berklee/tinkle3.mp3',
+ 'https://tonejs.github.io/audio/berklee/taps_1c.mp3'
+];
+// These banks contain prerecorded MP3 samples for each pitch (not live synthesis).
+const SOUNDFONT_BASE='https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/';
+const FONT_BY_MODE={piano:'acoustic_grand_piano',synth:'lead_2_sawtooth',marimba:'marimba'};
+const NOTE_NAMES=['C','Cs','D','Ds','E','F','Fs','G','Gs','A','As','B'];
+const SYNTH_CLIPS=[
+ 'https://tonejs.github.io/audio/berklee/gurgling_theremin_1.mp3',
+ 'https://tonejs.github.io/audio/berklee/arpeggio3crazy.mp3',
+ 'https://tonejs.github.io/audio/berklee/gong_1.mp3',
+ 'https://tonejs.github.io/audio/berklee/tinkle3.mp3'
+];
+const MARIMBA_CLIPS=[
+ 'https://tonejs.github.io/audio/berklee/tinkle3.mp3',
+ 'https://tonejs.github.io/audio/berklee/gong_1.mp3',
+ 'https://tonejs.github.io/audio/berklee/taps_1c.mp3',
+ 'https://tonejs.github.io/audio/berklee/thump1.mp3'
+];
+const ELECTRONIC_CLIPS=[
+ 'https://tonejs.github.io/audio/berklee/arpeggio3crazy.mp3',
+ 'https://tonejs.github.io/audio/berklee/gurgling_theremin_1.mp3',
+ 'https://tonejs.github.io/audio/drum-samples/loops/ominous.mp3',
+ 'https://tonejs.github.io/audio/loop/FWDL.mp3',
+ 'https://tonejs.github.io/audio/berklee/shaker_slow_1.mp3',
+ 'https://tonejs.github.io/audio/berklee/taps_1c.mp3',
+ 'https://tonejs.github.io/audio/berklee/tinkle3.mp3',
+ 'https://tonejs.github.io/audio/berklee/gong_1.mp3'
+];
+const DRUM_KITS={
+ electro:DRUMS,
+ house:[DRUMS[0],DRUMS[1],DRUMS[2],DRUMS[3],DRUMS[0],DRUMS[5],DRUMS[7],DRUMS[7]],
+ lofi:[DRUMS[0],DRUMS[1],DRUMS[2],sfx+'acoustic-drum-kit-pedal-hat-01.mp3',DRUMS[4],DRUMS[5],sfx+'acoustic-drum-kit-ride-01.mp3',DRUMS[3]],
+ sampled:DRUMS
+};
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+function volume(){return clamp(+$('volume').value||0,0,1);}
+function rateForSemitones(n){return Math.pow(2,n/12);}
+function status(text,good=false){$('statusText').textContent=text;$('led').classList.toggle('on',good);}
+function playFile(src,options={}){
+ if(!src){status('NO AUDIO SOURCE');return null;}
+ const {rate=1,loop=false,record=true,index=-1,loopKey=null,objectUrl=false}=options;
+ // New Audio per hit allows simultaneous, overlapping multi-touch playback.
+ const player=new Audio();player.preload='auto';player.src=src;player.loop=!!loop;player.volume=volume();player.playbackRate=clamp(rate,.25,4);
+ try{player.preservesPitch=false;player.mozPreservesPitch=false;player.webkitPreservesPitch=false;}catch(_){}
+ state.activePlayers.add(player);
+ const cleanup=()=>{state.activePlayers.delete(player);if(loopKey!==null&&state.loops.get(loopKey)===player)state.loops.delete(loopKey);};
+ player.addEventListener('ended',cleanup,{once:true});
+ player.addEventListener('error',()=>{cleanup();status('AUDIO LOAD ERROR · CHECK CONNECTION',false);},{once:true});
+ player.addEventListener('canplay',()=>{status('AUDIO READY',true);},{once:true});
+ const promise=player.play();if(promise&&promise.catch)promise.catch(()=>{cleanup();status('TAP AGAIN TO START AUDIO',false);});
+ if(record&&state.recording)state.events.push({time:performance.now()-state.startedAt,index,mode:state.mode,src,rate,loop});
+ return player;
+}
+function isPadLooping(index){for(const key of state.loops.keys())if(String(key).endsWith(':'+index))return true;return false;}
+function toggleLoop(index,src,rate=1){
+ const key=state.mode+':'+index;const current=state.loops.get(key);
+ if(current){try{current.pause();current.currentTime=0;}catch(_){}state.activePlayers.delete(current);state.loops.delete(key);if(!isPadLooping(index))grid.children[index]?.classList.remove('active');status('LOOP STOPPED',true);return;}
+ const player=playFile(src,{rate,loop:true,index,loopKey:key});
+ if(player){state.loops.set(key,player);const pad=grid.children[index];if(pad){pad.classList.add('active');pad.style.setProperty('--pad-color',colors[Math.floor(index/8)]);}status('LOOP PLAYING',true);}
+}
+function stopAllAudio(){
+ for(const player of [...state.activePlayers]){try{player.pause();player.currentTime=0;}catch(_){} }
+ state.activePlayers.clear();state.loops.clear();grid.querySelectorAll('.pad').forEach(p=>p.classList.remove('active','playing'));
+}
+function flash(index){const p=grid.children[index];if(!p)return;p.classList.add('active','playing');p.style.setProperty('--pad-color',colors[Math.floor(index/8)]);setTimeout(()=>p.classList.remove('playing'),130);if(!state.held.has(index)&&!isPadLooping(index))setTimeout(()=>{if(!state.held.has(index)&&!isPadLooping(index))p.classList.remove('active');},180);}
+function spreadRainbow(origin){
+ // Rainbow glow stays beside the pressed pad: center + immediate orthogonal neighbors only.
+ state.rainbowToken++;const token=state.rainbowToken;
+ state.rainbowTimers.forEach(clearTimeout);state.rainbowTimers=[];
+ [...grid.children].forEach(p=>p.classList.remove('rainbow'));
+ const row=Math.floor(origin/8),col=origin%8;
+ const nearby=[
+  {i:origin,dir:0},
+  ...(col>0?[{i:origin-1,dir:1}]:[]),
+  ...(col<7?[{i:origin+1,dir:2}]:[]),
+  ...(row>0?[{i:origin-8,dir:3}]:[]),
+  ...(row<7?[{i:origin+8,dir:4}]:[])
+ ];
+ nearby.forEach(({i,dir},orderIndex)=>{
+  const timer=setTimeout(()=>{
+   if(token!==state.rainbowToken)return;
+   const pad=grid.children[i];if(!pad)return;
+   const hue=(dir*60+origin*17)%360;
+   pad.style.setProperty('--rainbow-color',`hsl(${hue} 100% 63%)`);
+   pad.classList.add('rainbow');
+   const off=setTimeout(()=>{if(token===state.rainbowToken)pad.classList.remove('rainbow');},420);
+   state.rainbowTimers.push(off);
+  },orderIndex*45);
+  state.rainbowTimers.push(timer);
+ });
+}
+function targetSemitone(index){
+ const row=Math.floor(index/8),col=index%8,scale=scaleMap[$('scale').value]||scaleMap.minor;
+ // Launchpad-style diagonal scale layout, about four octaves across the grid.
+ const degree=(7-row)*4+col;return scale[degree%scale.length]+12*Math.floor(degree/scale.length);
+}
+function targetMidi(index){const scale=$('scale').value;const base=(scale==='minor'||scale==='pent')?45:48;return base+targetSemitone(index);}
+function nearestPianoAnchor(midi){let best=PIANO_ANCHORS[0];for(const a of PIANO_ANCHORS)if(Math.abs(a.midi-midi)<Math.abs(best.midi-midi))best=a;return best;}
+function fileClipForMode(index,clips){const row=Math.floor(index/8),col=index%8;return clips[(row+col)%clips.length];}
+function midiToKey(midi){return NOTE_NAMES[midi%12]+(Math.floor(midi/12)-1);}
+function keyToMidi(key){
+ const m=String(key).match(/^(C|Cs|D|Ds|E|F|Fs|G|Gs|A|As|B)(-?\d+)$/);if(!m)return null;
+ const semitone=NOTE_NAMES.indexOf(m[1]);return (Number(m[2])+1)*12+semitone;
+}
+function loadSoundfont(name){
+ if(state.sampleBanks.has(name))return Promise.resolve(state.sampleBanks.get(name));
+ if(state.sampleBankPromises.has(name))return state.sampleBankPromises.get(name);
+ window.MIDI=window.MIDI||{};window.MIDI.Soundfont=window.MIDI.Soundfont||{};
+ const promise=new Promise((resolve,reject)=>{
+  const script=document.createElement('script');script.async=true;script.src=SOUNDFONT_BASE+name+'-mp3.js';
+  script.onload=()=>{const bank=window.MIDI&&window.MIDI.Soundfont&&window.MIDI.Soundfont[name];if(bank&&Object.keys(bank).length){state.sampleBanks.set(name,bank);resolve(bank);}else{reject(new Error('Audio sample bank is empty: '+name));}};
+  script.onerror=()=>reject(new Error('Could not load audio sample bank: '+name));document.head.appendChild(script);
+ });
+ state.sampleBankPromises.set(name,promise);promise.catch(()=>state.sampleBankPromises.delete(name));return promise;
+}
+function sampleForMidi(bank,midi){
+ const exact=midiToKey(midi);if(typeof bank[exact]==='string')return bank[exact];
+ let best=null,bestDistance=Infinity;
+ for(const [key,src] of Object.entries(bank)){const keyMidi=keyToMidi(key);if(keyMidi===null||typeof src!=='string'||!src.startsWith('data:audio/'))continue;const distance=Math.abs(keyMidi-midi);if(distance<bestDistance){best={src,midi:keyMidi};bestDistance=distance;}}
+ return best?best.src:null;
+}
+function prepareSoundfontForMode(mode){
+ const name=mode==='textmode'?$('textInstrument').value:FONT_BY_MODE[mode];if(!name)return;
+ if(state.sampleBanks.has(name)){status('MP3 SAMPLES READY',true);return;}
+ status('LOADING '+mode.toUpperCase()+' SAMPLES…',false);
+ loadSoundfont(name).then(()=>{if(state.mode===mode)status(mode.toUpperCase()+' SAMPLES READY',true);}).catch(()=>{if(state.mode===mode)status('SAMPLE LOAD FAILED · CHECK INTERNET',false);});
+}
+function playFallbackSample(name,midi,index){
+ // Backup external MP3 clips if a full soundfont bank is unavailable.
+ let src,rate=1;
+ if(name==='acoustic_grand_piano'){src='https://tonejs.github.io/audio/salamander/C4.mp3';rate=rateForSemitones(midi-60);}
+ else if(name==='lead_2_sawtooth'){src=SYNTH_CLIPS[index%SYNTH_CLIPS.length];rate=rateForSemitones((index%8)-3.5);}
+ else {src=MARIMBA_CLIPS[index%MARIMBA_CLIPS.length];rate=rateForSemitones((index%8)-3.5);}
+ playFile(src,{index,rate});status('USING EXTERNAL MP3 FALLBACK',false);
+}
+function playSoundfontNote(name,midi,index){
+ const bank=state.sampleBanks.get(name);
+ if(bank){const src=sampleForMidi(bank,midi);if(src){playFile(src,{index});return;}playFallbackSample(name,midi,index);return;}
+ status('LOADING AUDIO · TAP AGAIN IF NEEDED',false);
+ loadSoundfont(name).then(loaded=>{const src=sampleForMidi(loaded,midi);if(src)playFile(src,{index});else playFallbackSample(name,midi,index);}).catch(()=>playFallbackSample(name,midi,index));
+}
+function playPad(index){
+ const row=Math.floor(index/8),col=index%8;
+ if(state.mode==='original'){
+  if(row<4){const src=(DRUM_KITS[$('kit').value]||DRUMS)[(col+row*2)%8];const rate=rateForSemitones((col-3.5)*.7);playFile(src,{rate,index});}
+  else {const src=MUSIC_LOOPS[col];const rate=rateForSemitones((3.5-row)*.5);toggleLoop(index,src,rate);}
+ } else if(state.mode==='piano'){
+  playSoundfontNote('acoustic_grand_piano',targetMidi(index),index);
+ } else if(state.mode==='synth'){
+  playSoundfontNote('lead_2_sawtooth',targetMidi(index),index);
+ } else if(state.mode==='usermp3'){
+  if(!state.userTracks.length){status('CHOOSE MP3 FILES FIRST',false);$('userMp3Files').click();return;}
+  const track=state.userTracks[index%state.userTracks.length];toggleLoop(index,track.url,1);
+ } else if(state.mode==='marimba'){
+  playSoundfontNote('marimba',targetMidi(index),index);
+ } else if(state.mode==='electronic'){
+  const src=ELECTRONIC_CLIPS[col];const rate=rateForSemitones((3.5-row)*.65);toggleLoop(index,src,rate);
+ } else if(state.mode==='textmode'){
+  const mode=$('textInstrument').value;playSoundfontNote(mode,targetMidi(index),index);
+ }
+ flash(index);
+}
+function holdPad(index,pointerId){state.held.set(index,pointerId);playPad(index);spreadRainbow(index);const p=grid.children[index];p.classList.add('active');p.style.setProperty('--pad-color',colors[Math.floor(index/8)]);}
+function releasePad(index,pointerId){if(state.held.get(index)===pointerId){state.held.delete(index);const p=grid.children[index];if(p&&!isPadLooping(index))p.classList.remove('active');}}
+function padLabel(index){const row=Math.floor(index/8),col=index%8;
+ if(state.mode==='original')return row<4?['DRUM','DRUM','DRUM','DRUM'][row]:['LOOP','LOOP','LOOP','LOOP'][row-4];
+ if(state.mode==='piano'||state.mode==='synth'||state.mode==='marimba'||state.mode==='textmode')return midiToKey(targetMidi(index)).replace('s','#');
+ if(state.mode==='usermp3'){if(!state.userTracks.length)return 'MP3';return state.userTracks[index%state.userTracks.length].name.replace(/\.[^.]+$/,'').slice(0,10);}
+ if(state.mode==='marimba')return 'MALLET';
+ return ['E-LOOP','E-LOOP','E-LOOP','E-LOOP','E-LOOP','E-LOOP','E-LOOP','E-LOOP'][col];
+}
+function renderLabels(){
+ [...grid.children].forEach((p,i)=>{p.dataset.label=padLabel(i);p.querySelector('.num').textContent=String(i+1).padStart(2,'0');p.setAttribute('aria-label',`Pad ${i+1}: ${p.dataset.label}`);});
+ grid.classList.toggle('labels',state.labels);$('labels').textContent='PAD LABELS: '+(state.labels?'ON':'OFF');
+}
+function buildGrid(){grid.innerHTML='';for(let i=0;i<64;i++){
+ const b=document.createElement('button');b.type='button';b.className='pad';b.innerHTML='<span class="num">'+String(i+1).padStart(2,'0')+'</span>';
+ b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}holdPad(i,e.pointerId);});
+ b.addEventListener('pointerup',e=>{e.preventDefault();releasePad(i,e.pointerId);});b.addEventListener('pointercancel',e=>releasePad(i,e.pointerId));b.addEventListener('lostpointercapture',e=>releasePad(i,e.pointerId));b.addEventListener('contextmenu',e=>e.preventDefault());grid.appendChild(b);
+ }renderLabels();}
+function buildSeq(){const wrap=$('sequencer');wrap.innerHTML='';const names=['KICK','SNARE','HAT','CLAP'];state.seq.forEach((row,r)=>{
+ const rowWrap=document.createElement('div');rowWrap.style.cssText='display:grid;grid-template-columns:40px minmax(0,1fr);gap:6px;align-items:center;margin:7px 0';
+ const label=document.createElement('span');label.textContent=names[r];label.style.cssText='font-size:9px;color:#aeb3bd';const steps=document.createElement('div');steps.className='seq';
+ row.forEach((on,s)=>{const b=document.createElement('button');b.className='step'+(on?' on':'');b.setAttribute('aria-label',names[r]+' step '+(s+1));b.addEventListener('click',()=>{state.seq[r][s]=!state.seq[r][s];b.classList.toggle('on',state.seq[r][s]);});steps.appendChild(b);});rowWrap.append(label,steps);wrap.appendChild(rowWrap);
+ });}
+function stopSequence(){state.playing=false;if(state.timer)clearTimeout(state.timer);state.timer=null;$('playSeq').textContent='▶ PLAY SEQUENCE';}
+function scheduleStep(){if(!state.playing)return;const bpm=clamp(+$('bpm').value||120,50,200),interval=60000/bpm/4;
+ state.seq.forEach((row,r)=>{if(row[state.step]){const src=(DRUM_KITS[$('kit').value]||DRUMS)[[0,1,2,3][r]];playFile(src,{index:r*8,record:false});const p=grid.children[r*8];if(p){p.classList.add('active');p.style.setProperty('--pad-color',colors[r]);setTimeout(()=>{if(!state.held.has(r*8))p.classList.remove('active');},120);}}});
+ [...$('sequencer').querySelectorAll('.step')].forEach((el,i)=>el.classList.toggle('beat',i%16===state.step));state.step=(state.step+1)%16;state.timer=setTimeout(scheduleStep,interval);
+}
+function setMode(mode){state.mode=mode;document.querySelectorAll('.mode').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
+ const copy={
+  original:['ORIGINAL LAUNCHPAD · 8×8','Upper rows: drum hits · lower rows: looping audio clips'],
+  piano:['PIANO · 8×8','Recorded grand-piano MP3 samples · touch to play notes'],
+  synth:['SYNTH · 8×8','Recorded electronic instrument samples · no oscillator synthesis'],
+  usermp3:['USER MP3 · 8×8','Assign one or more MP3s to pads · tap a pad to loop / stop'],
+  marimba:['MARIMBA · 8×8','Recorded marimba MP3 soundfont samples · touch to play notes'],
+  electronic:['ELECTRONIC · 8×8','External electronic clips and loops · tap again to stop a loop'],
+  textmode:['TEXT MELODY · 8×8','Enter a note sequence below to play it exactly in order · recorded samples']
+ };
+ $('gridTitle').textContent=copy[mode][0];$('modeInfo').textContent=copy[mode][1];$('touchInfo').textContent=mode==='usermp3'?`${state.userTracks.length} MP3 FILE(S)`:'64 PADS · MULTI-TOUCH';$('userMp3Tools').style.display=mode==='usermp3'?'flex':'none';$('textModeTools').style.display=mode==='textmode'?'flex':'none';renderLabels();prepareSoundfontForMode(mode);
+}
+function updateVolume(){for(const player of state.activePlayers)player.volume=volume();}
+$('playSeq').addEventListener('click',()=>{if(state.playing){stopSequence();return;}state.playing=true;state.step=0;$('playSeq').textContent='Ⅱ PAUSE';scheduleStep();});
+$('stopSeq').addEventListener('click',()=>{stopSequence();stopTextPlayback();stopAllAudio();state.held.clear();status('STOPPED',false);});
+$('record').addEventListener('click',()=>{if(!state.recording){state.recording=true;state.events=[];state.startedAt=performance.now();$('record').textContent='■ STOP REC';$('record').classList.add('warn');status('RECORDING',true);}else{state.recording=false;$('record').textContent='● RECORD';$('record').classList.remove('warn');status('REC '+state.events.length+' EVENTS',true);}});
+$('clear').addEventListener('click',()=>{state.seq.forEach(r=>r.fill(false));buildSeq();state.events=[];stopSequence();stopTextPlayback();stopAllAudio();});
+$('kit').addEventListener('change',()=>{state.kit=$('kit').value;});
+$('volume').addEventListener('input',updateVolume);
+$('bpm').addEventListener('change',()=>{$('bpm').value=clamp(+$('bpm').value||120,50,200);$('timeReadout').textContent=$('bpm').value+' BPM · 16 STEPS';});
+$('seqToggle').addEventListener('click',()=>{const panel=$('seqPanel');panel.style.display=panel.style.display==='none'?'block':'none';if(panel.style.display==='block')panel.scrollIntoView({behavior:'smooth',block:'nearest'});});
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+$('labels').addEventListener('click',()=>{state.labels=!state.labels;renderLabels();});
+$('demo').addEventListener('click',()=>{state.seq=[[true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,false,false,false,true,false,false,false,false,false,false,false,true,false,false,false],[true,false,true,false,true,false,true,false,true,false,true,false,true,false,true,false],[false,false,false,false,true,false,false,false,false,false,false,false,true,false,false,false]];buildSeq();$('seqPanel').style.display='block';});
+$('save').addEventListener('click',()=>{const data={version:4,bpm:+$('bpm').value,kit:$('kit').value,seq:state.seq,events:state.events,mode:state.mode,textSequence:$('textSequence').value,textInstrument:$('textInstrument').value};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='launchpad-pattern.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('load').addEventListener('click',()=>{const input=document.createElement('input');input.type='file';input.accept='application/json,.json';input.onchange=()=>{const file=input.files&&input.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const d=JSON.parse(reader.result);if(!Array.isArray(d.seq)||d.seq.length!==4||d.seq.some(r=>!Array.isArray(r)||r.length!==16))throw Error();state.seq=d.seq.map(r=>r.map(Boolean));if(d.bpm)$('bpm').value=clamp(+d.bpm,50,200);if(d.kit&&DRUM_KITS[d.kit])$('kit').value=d.kit;buildSeq();if(d.textSequence) $('textSequence').value=String(d.textSequence);if(['acoustic_grand_piano','lead_2_sawtooth','marimba'].includes(d.textInstrument))$('textInstrument').value=d.textInstrument;if(d.mode&&['original','piano','synth','usermp3','marimba','electronic','textmode'].includes(d.mode))setMode(d.mode);}catch(_){alert('유효한 Launchpad 패턴 파일이 아닙니다.');}};reader.readAsText(file);};input.click();});
+$('chooseMp3').addEventListener('click',()=>{$('userMp3Files').value='';$('userMp3Files').click();});
+$('userMp3Files').addEventListener('change',e=>{
+ const files=Array.from(e.target.files||[]);if(!files.length)return;
+ if(state.userTracks.length){
+  for(const [key,player] of [...state.loops.entries()]){if(state.objectUrls.includes(player.src)||state.objectUrls.some(u=>player.src.startsWith(u))){try{player.pause();player.currentTime=0;}catch(_){}state.activePlayers.delete(player);state.loops.delete(key);}}
+  for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];
+ }
+ // Keep the other mode's external loops playing; replace only the user's local MP3 mapping.
+ state.userTracks=files.slice(0,64).map(file=>{const url=URL.createObjectURL(file);state.objectUrls.push(url);return {name:file.name,url};});
+ $('mp3Summary').textContent=state.userTracks.length===1?`1개 파일: ${state.userTracks[0].name} · 모든 패드에 연결됨`:`${state.userTracks.length}개 파일 선택 · 패드에 순서대로 연결됨`;
+ $('touchInfo').textContent=`${state.userTracks.length} MP3 FILE(S)`;renderLabels();status('LOCAL MP3 READY',true);
+});
+function parseMelodyText(text){
+ const cleaned=String(text||'').replace(/\|/g,' ').replace(/[,;]+/g,' ').replace(/\/\/[^\n]*/g,' ');
+ const tokens=cleaned.trim().split(/\s+/).filter(Boolean);const events=[];
+ for(const token of tokens){
+  if(token==='-'||/^rest$/i.test(token)){events.push({rest:true,beats:1});continue;}
+  const m=token.match(/^([A-Ga-g])([#b]?)(-?\d+)(?::(\d+(?:\.\d+)?))?$/);
+  if(!m)throw new Error('읽을 수 없는 음표: '+token);
+  const letter=m[1].toUpperCase(),acc=m[2],octave=Number(m[3]);
+  const base={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[letter];
+  let semitone=base+(acc==='#'?1:acc==='b'?-1:0);let midi=(octave+1)*12+semitone;
+  if(!Number.isFinite(midi)||midi<0||midi>127)throw new Error('음역을 벗어난 음표: '+token);
+  events.push({midi,beats:m[4]?Math.max(.125,Math.min(8,Number(m[4]))):1});
+ }
+ if(!events.length)throw new Error('재생할 음표를 입력하세요.');return events;
+}
+function stopTextPlayback(){state.textPlayToken++;$('textStatus').textContent='재생 중지';$('playText').textContent='▶ 입력한 멜로디 연주';}
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+$('playText').addEventListener('click',async()=>{
+ stopTextPlayback();const token=state.textPlayToken;
+ let events;try{events=parseMelodyText($('textSequence').value);}catch(error){$('textStatus').textContent=error.message;return;}
+ const instrument=$('textInstrument').value;
+ $('playText').textContent='Ⅱ 재생 중';$('textStatus').textContent='외부 녹음 음원 로딩 중…';
+ try{
+  const bank=await loadSoundfont(instrument);
+  if(token!==state.textPlayToken)return;
+  $('textStatus').textContent=`${events.length}개 음표 재생 중`;
+  const beatMs=60000/clamp(+$('bpm').value||120,50,200);
+  for(const event of events){
+   if(token!==state.textPlayToken)return;
+   if(!event.rest){const src=sampleForMidi(bank,event.midi);if(src)playFile(src,{index:-1,record:false});else $('textStatus').textContent='해당 음원의 샘플이 없습니다.';}
+   await wait(beatMs*event.beats);
+  }
+  if(token===state.textPlayToken){$('textStatus').textContent='멜로디 재생 완료';$('playText').textContent='▶ 입력한 멜로디 연주';}
+ }catch(error){if(token===state.textPlayToken){$('textStatus').textContent='음원 로딩 실패 · 인터넷 연결 확인';$('playText').textContent='▶ 입력한 멜로디 연주';}}
+});
+$('stopText').addEventListener('click',stopTextPlayback);
+$('textSequence').addEventListener('input',()=>{if(state.mode==='textmode')$('textStatus').textContent='멜로디 입력 준비 완료';});
+$('textInstrument').addEventListener('change',()=>{if(state.mode==='textmode')prepareSoundfontForMode('textmode');});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)state.held.clear();});
+window.addEventListener('pagehide',()=>{stopAllAudio();for(const u of state.objectUrls)URL.revokeObjectURL(u);});
+buildGrid();buildSeq();setMode('original');$('mp3Summary').textContent='MP3 파일은 이 모드에서만 지정합니다.';status('AUDIO READY',false);
+})();
+</script>
+</body>
+</html>
